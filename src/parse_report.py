@@ -1,25 +1,11 @@
 import json
-import re
 import sys
 
 from pypdf import PdfReader
 
 BUREAUS = {"EXPERIAN", "TRANSUNION", "EQUIFAX"}
 SECTION_END_MARKER = "Note for testers"
-HEADER_LABELS = "Creditor Item Type Opened Balance Status"
-
-ITEM_TYPES = ["Closed Account", "Charge-Off", "Collection", "Delinquent"]
-
-ROW_RE = re.compile(
-    r"^(?P<prefix>.+?)\s+(?P<opened>\d{2}/\d{4})\s+(?P<balance>\$[\d,]+)\s+(?P<status>.+)$"
-)
-
-
-def split_creditor_and_item_type(prefix):
-    for item_type in ITEM_TYPES:
-        if prefix.endswith(item_type):
-            return prefix[: -len(item_type)].strip(), item_type
-    return prefix.strip(), ""
+HEADER_ROW = ["Creditor", "Item Type", "Opened", "Balance", "Status"]
 
 
 def parse_negative_items(text):
@@ -27,31 +13,41 @@ def parse_negative_items(text):
 
     result = {}
     bureau = None
-    for line in lines:
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+
         if line in BUREAUS:
             bureau = line
             result[bureau] = []
+            i += 1
             continue
 
         if line.startswith(SECTION_END_MARKER):
             bureau = None
+            i += 1
             continue
 
-        if bureau is None or line == HEADER_LABELS:
+        if bureau is None:
+            i += 1
             continue
 
-        match = ROW_RE.match(line)
-        if not match:
+        if lines[i:i + 5] == HEADER_ROW:
+            i += 5
             continue
 
-        creditor, item_type = split_creditor_and_item_type(match.group("prefix"))
-        result[bureau].append({
-            "creditor": creditor,
-            "item_type": item_type,
-            "opened": match.group("opened"),
-            "balance": match.group("balance"),
-            "status": match.group("status"),
-        })
+        if i + 5 <= len(lines):
+            creditor, item_type, opened, balance, status = lines[i:i + 5]
+            result[bureau].append({
+                "creditor": creditor,
+                "item_type": item_type,
+                "opened": opened,
+                "balance": balance,
+                "status": status,
+            })
+            i += 5
+        else:
+            break
 
     return result
 
