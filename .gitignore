@@ -1,0 +1,8 @@
+.env
+.env.*
+*.pdf
+*_real.*
+uploads/
+private/
+
+!fixtures/synthetic-credit-report.pdf
