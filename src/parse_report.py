@@ -2,17 +2,14 @@ import json
 import re
 import sys
 
-import pdfplumber
+from pypdf import PdfReader
 
 BUREAUS = {"EXPERIAN", "TRANSUNION", "EQUIFAX"}
 SECTION_END_MARKER = "Note for testers"
 HEADER_LABELS = "Creditor Item Type Opened Balance Status"
 
-# Item types used in the synthetic fixture, longest first so a multi-word
-# type (e.g. "Closed Account") is matched before a shorter one.
 ITEM_TYPES = ["Closed Account", "Charge-Off", "Collection", "Delinquent"]
 
-# Each item row is a single line: "<creditor> <item type> <opened> <balance> <status>".
 ROW_RE = re.compile(
     r"^(?P<prefix>.+?)\s+(?P<opened>\d{2}/\d{4})\s+(?P<balance>\$[\d,]+)\s+(?P<status>.+)$"
 )
@@ -63,12 +60,12 @@ def main():
     pdf_path = sys.argv[1]
 
     page_texts = []
-    with pdfplumber.open(pdf_path) as pdf:
-        for page in pdf.pages:
-            text = page.extract_text()
-            print(text)
-            if text:
-                page_texts.append(text)
+    reader = PdfReader(pdf_path)
+    for page in reader.pages:
+        text = page.extract_text()
+        print(text)
+        if text:
+            page_texts.append(text)
 
     negative_items = parse_negative_items("\n".join(page_texts))
     print(json.dumps(negative_items, indent=2))
