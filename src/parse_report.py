@@ -7,6 +7,17 @@ SECTION_END_MARKER = "Note for testers"
 HEADER_ROW = ["Creditor", "Item Type", "Opened", "Balance", "Status"]
 
 
+def extract_text_from_pdf(source):
+    """Extract raw text from a PDF. `source` may be a file path or a file-like object."""
+    reader = PdfReader(source)
+    page_texts = []
+    for page in reader.pages:
+        text = page.extract_text()
+        if text:
+            page_texts.append(text)
+    return "\n".join(page_texts)
+
+
 def parse_negative_items(text):
     lines = [line.strip() for line in text.splitlines() if line.strip()]
 
@@ -76,14 +87,8 @@ def print_report(negative_items):
 def main():
     pdf_path = sys.argv[1]
 
-    reader = PdfReader(pdf_path)
-    page_texts = []
-    for page in reader.pages:
-        text = page.extract_text()
-        if text:
-            page_texts.append(text)
-
-    negative_items = parse_negative_items("\n".join(page_texts))
+    text = extract_text_from_pdf(pdf_path)
+    negative_items = parse_negative_items(text)
     print_report(negative_items)
 
 
